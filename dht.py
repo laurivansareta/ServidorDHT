@@ -13,26 +13,24 @@ class DHT:
         n = int(h.hexdigest(), base=16) % 15
         n = "{0:b}".format(n)
         m = str(n)
-        self.p = m.zfill(4)
+        return m.zfill(4)
 
     def __init__(self, k):
-        self.gerar_hash(k)
-        self.k = k
+        self.p = self.gerar_hash(k)
         self.h = {}
         print("CHAVE " + self.p)
         print(type(self.h))
         print("\n")
 
-        for sk in self.subkeys(self.k):
+        for sk in self.subkeys(self.p):
             self.h[sk + '0'] = None
 
-        for sk in self.subkeys(self.k):
+        for sk in self.subkeys(self.p):
             self.h[sk + '1'] = None
 
         sorted(self.h.keys())
 
     def insert(self, k, v):
-
         for sk in self.subkeys(k):
             print(sk)
             print("\n")
