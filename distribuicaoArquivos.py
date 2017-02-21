@@ -20,8 +20,8 @@ class DHT:
         h.hexdigest()
         n = int(h.hexdigest(), base=16) % 15
         n = "{0:b}".format(n)
-        p = str(n)
-        self.p = p.zfill(4)
+        m = str(n)
+        self.p = m.zfill(4)
 
     def __init__(self, k):
         self.gerar_hash(k)
@@ -41,18 +41,18 @@ class DHT:
 
     def insert(self, k, v):
 
-        for sk in self.subkeys(self, k):
+        for sk in self.subkeys(k):
             print(sk)
             print("\n")
             if sk in self.h:
                 if not self.h[sk]:
                     self.h[sk] = (k, v)
-                    return sk + p
+                    return sk + self.p
         return None
 
     def lookup(self, k):
-        print(list(self.subkeys(self, k)))
-        for sk in self.subkeys(self, k):
+        print(list(self.subkeys(k)))
+        for sk in self.subkeys(k):
             print(sk)
             print("\n")
             print(self.h)
@@ -68,14 +68,8 @@ class DHT:
 
 
 class DhtServer:
-    app = Bottle()
-
     def __init__(self, port):
-        self.myPort = port
         self.dht = DHT(port)
-
-    def start_dht_Server(self):
-        run(self.app, host='localhost', port=self.myPort)
 
     def insert_dht(self, key, value):
         #usar este método para fazer as validações necessárias referente a inserção na dht.
@@ -84,21 +78,16 @@ class DhtServer:
     def lookup_dht(self,key):
         return self.dht.lookup(key)
 
-    @get('/dht/<key>')
-    def dht_lookup(key):
-        #return json.dumps(dht.lookup(key))
-        #return json.dumps(lookup_dht(key))
-        print(key,'teste lookup')
-        return json.dumps(key)
+    def dht_lookup(self,key):
+        return self.dht.lookup(key)
 
-    # @post('/dht/<key>/<value>')
-    # def dht_insert(key, value):
-    #    global dht
-    #    print(p)
-    #    return json.dumps(dht.insert(key, value))
+    def dht_lookup_dump(self, key):
+        return json.dumps(self.dht_lookup(key))
 
-    @bottle.route('/dht/<key>/<value>')
-    def dht_insert(key, value):
+
+    #@bottle.route('/dht/<key>/<value>')
+    def dht_insert(self, key, value):
+        self.dht.insert(key, value)
         #global dht
         #return json.dumps(dht.insert(key, value))
         #return json.dumps(insert_dht(key, value))
@@ -106,39 +95,40 @@ class DhtServer:
 
 
 '''---------------------------------------------------------------------------------'''
+
 class PeerToPeerServer:
     def __init__(self, port, peers):
         self.myPort = port
         self.peers = peers
-        self.hostLocal1 = 'localhost'
+        self.hostLocal = 'localhost'
         self.urlLocal = 'http://'
 
     #Nos métodos abaixo ver como fazer pra usar as informações da classe.
-    @bottle.route('/peers/<hostLocal>/<myPort>')
-    def index(hostLocal, myPort):
+    #@bottle.route('/peers/<hostLocal>/<myPort>')
+    def index(self, host, port):
         try:
-            teste = peers.index(urlLocal+hostLocal+':'+myPort)
-            return json.dumps(peers)
+            self.peers.index(self.urlLocal + host + ':' + port)
+            return json.dumps(self.peers)
         except Exception as e:
-            peers.append(urlLocal+hostLocal+':'+myPort)
-            return json.dumps(peers)
+            self.peers.append(self.urlLocal + host + ':' + port)
+            return json.dumps(self.peers)
 
-    def client():
+    def client(self):
         time.sleep(5)
         while True:
             time.sleep(1)
             np = []
-            for p in peers:
-                r = requests.get(p + '/peers/'+hostLocal1+'/'+myPort1)
+            for p in self.peers:
+                r = requests.get(p + '/peers/'+self.hostLocal+'/'+self.myPort)
                 np = np + json.loads(r.text)
                 print(r.text)
                 time.sleep(1)
-            peers[:] = list(set(np + peers))
+                self.peers[:] = list(set(np + self.peers))
 
     def start_PeerToPeer_Server(self):
-        t = threading.Thread(target=client)
+        t = threading.Thread(target=self.client)
         t.start()
-        bottle.run(host=self.hostLocal, port=int(self.myPort))
+
 
 
 
@@ -148,19 +138,30 @@ class DistribuicaoArquivos:
     def __init__(self, port, peers):
         self.myPort = port
         self.peers = peers
+        self.servidorDht = DhtServer(self.myPort)
+        self.servidorPeerToPeer = PeerToPeerServer(self.myPort, self.peers)
+        self.b = bottle.Bottle()
+        self.b.get('/dht/<key>')(self.servidorDht.dht_lookup)
+        self.b.route('/dht/<key>/<value>')(self.servidorDht.dht_insert)
+        self.b.route('/peers/<host>/<port>')(self.servidorPeerToPeer.index)
+        self.initPeerToPeer()
+
 
     def initDht(self):
-        self.servidorDht = DhtServer(self.myPort)
-        self.servidorDht.start_dht_Server()
+        #self.servidorDht = DhtServer(self.myPort)
+        #self.servidorDht.start_dht_Server()
+        pass
 
     def initPeerToPeer(self):
-        self.servidorPeerToPeer = PeerToPeerServer(self.myPort, self.peers)
+        #self.servidorPeerToPeer = PeerToPeerServer(self.myPort, self.peers)
         self.servidorPeerToPeer.start_PeerToPeer_Server()
 
+    def run(self):
+        self.b.run(host='localhost', port=self.myPort)
 
-#implementação, separar dos arquivos de classe
+
+#instância.
 
 servidor = DistribuicaoArquivos(sys.argv[1], sys.argv[2:])
-servidor.initDht()
-#servidor.initPeerToPeer()
+servidor.run()
 
