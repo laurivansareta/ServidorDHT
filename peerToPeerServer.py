@@ -11,6 +11,9 @@ class PeerToPeerServer:
         self.hostLocal = 'localhost'
         self.urlLocal = 'http://'
 
+    def get_peers(self):
+        return self.peers
+
     def index(self, host, port):
         try:
             self.peers.index(self.urlLocal + host + ':' + port)
@@ -25,11 +28,15 @@ class PeerToPeerServer:
             time.sleep(1)
             np = []
             for p in self.peers:
-                r = requests.get(p + '/peers/'+self.hostLocal+'/'+self.myPort)
-                np = np + json.loads(r.text)
-                print(r.text)
-                time.sleep(1)
-                self.peers[:] = list(set(np + self.peers))
+                try:
+                    r = requests.get(p + '/peers/'+self.hostLocal+'/'+self.myPort)
+                    np = np + json.loads(r.text)
+                    print(r.text)
+                    time.sleep(1)
+                    self.peers[:] = list(set(np + self.peers))
+                except Exception as e:
+                    print(e)
+                    del(self.peers[self.peers.index(p)])
 
     def start_PeerToPeer_Server(self):
         t = threading.Thread(target=self.client)
