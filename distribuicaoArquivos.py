@@ -10,10 +10,13 @@ class DistribuicaoArquivos:
         self.servidorDht = DhtServer(self.myPort)
         self.servidorPeerToPeer = PeerToPeerServer(self.myPort, self.peers)
         self.b = bottle.Bottle()
-        self.b.get('/dht/<key>')(self.servidorDht.dht_lookup)
-        self.b.route('/dht/<key>/<value>')(self.servidorDht.dht_insert)
+        self.b.get('/dht/<key>')(self.servidorDht.lookup_dht)
+        self.b.route('/dht/<key>/<value>')(self.dht_insert)
         self.b.route('/peers/<host>/<port>')(self.servidorPeerToPeer.index)
         self.init_PeerToPeer()
+
+    def dht_insert(self, key, value):
+        return self.servidorDht.insert_dht(key, value, self.servidorPeerToPeer.get_peers())
 
     def init_PeerToPeer(self):
         self.servidorPeerToPeer.start_PeerToPeer_Server()
